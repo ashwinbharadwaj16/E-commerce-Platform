@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.4
+    container_name: keycloak
+    command: start-dev
+    ports:
+      - "9090:8080" # Host port 9090 maps to container port 8080
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    
+  # Zookeeper for Kafka Coordination
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  # Kafka Message Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092  # Clients connect here
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # Required for offsets storage
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1  # Required for transactions
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1  # Required for transactions
+    ports:
+      - "9092:9092"  # Map host port 9092 to container port 9092
+    volumes:
+      - ./kafka-data:/kafka/data  # Persist data (prevents log loss on restart)
+    restart: always
+
+  # Database for Order Service
+  mysql-order:
+    image: mysql:8.0
+    container_name: mysql-order-service
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: order_service
+      MYSQL_ROOT_PASSWORD: password
+    volumes:
+      - mysql-order-data:/var/lib/mysql
+
+  # Database for Inventory Service
+  mysql-inventory:
+    image: mysql:8.3.0
+    container_name: mysql-inventory-service
+    restart: always
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: inventory_service
+      MYSQL_ROOT_PASSWORD: password
+    volumes:
+      - mysql-inventory-data:/var/lib/mysql
+
+  # Database for Product Service
+  mongo-product:
+    image: mongo:latest
+    container_name: mongo-product-service
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-product-data:/data/db
+
+volumes:
+  mysql-order-data:
+  mysql-inventory-data:
+  mongo-product-data:
