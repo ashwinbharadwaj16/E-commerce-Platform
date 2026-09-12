@@ -1,285 +1,470 @@
 # 🛒 E-Commerce Microservices Platform
 
-<div align="center">
+A **Java Spring Boot microservices-based e-commerce platform** designed to demonstrate distributed systems, service-to-service communication, event-driven architecture, database separation, API gateway routing, and containerized deployment.
 
-![Java](https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=java)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.0+-brightgreen?style=for-the-badge&logo=spring)
-![Docker](https://img.shields.io/badge/Docker-Enabled-blue?style=for-the-badge&logo=docker)
-![Microservices](https://img.shields.io/badge/Architecture-Microservices-purple?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
-
-**A production-ready e-commerce platform built with distributed, event-driven microservices architecture**
-
-[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-documentation) • [🏗️ Architecture](#️-architecture) • [🤝 Contributing](#-contributing)
-
-</div>
+The platform is built around independent services for **products, inventory, and orders**, with **Apache Kafka** used for asynchronous event communication and **Netflix Eureka** used for service discovery.
 
 ---
 
-## ✨ Features
-
-- 🏪 **Product Catalog Management** - Complete CRUD operations for products
-- 📦 **Inventory Tracking** - Real-time stock management and validation
-- 🛍️ **Order Processing** - End-to-end order lifecycle management
-- 🔄 **Event-Driven Architecture** - Asynchronous communication with Apache Kafka
-- 🌐 **API Gateway** - Centralized routing and load balancing
-- 🔍 **Service Discovery** - Dynamic service registration with Eureka
-- 🚀 **Cloud-Ready** - Docker containerized with Kubernetes support
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-Ensure you have the following installed:
-
-```bash
-Java 17+          # Check: java --version
-Maven 3.6+        # Check: mvn --version  
-Docker & Compose  # Check: docker --version && docker-compose --version
-```
-
-### 1️⃣ Clone & Setup
-
-```bash
-git clone https://github.com/YOUR_USERNAME/ecommerce-microservices-platform.git
-cd ecommerce-microservices-platform
-```
-
-### 2️⃣ Start Infrastructure
-
-```bash
-# Start databases and message broker
-docker-compose up -d mysql mongodb kafka zookeeper
-```
-
-### 3️⃣ Launch Services
-
-```bash
-# Option A: Using Maven (Development)
-./start-services.sh
-
-# Option B: Using Docker (Production-like)
-docker-compose up --build
-```
-
-### 4️⃣ Verify Setup
-
-| Service | URL | Status |
-|---------|-----|--------|
-| 🌐 API Gateway | http://localhost:8181 | Entry point |
-| 🔍 Eureka Dashboard | http://localhost:8761 | Service registry |
-| 🛍️ Order Service | http://localhost:8181/api/order | Place orders |
-| 🏪 Product Service | http://localhost:8181/api/product | Browse products |
-| 📦 Inventory Service | http://localhost:8181/api/inventory | Check stock |
-
-### 5️⃣ Test the System
-
-```bash
-# Get all products
-curl http://localhost:8181/api/product
-
-# Check inventory
-curl "http://localhost:8181/api/inventory?skuCode=iphone-13"
-
-# Place an order
-curl -X POST http://localhost:8181/api/order \
-  -H "Content-Type: application/json" \
-  -d '{
-    "orderLineItems": [
-      {
-        "skuCode": "iphone-13",
-        "price": 1200,
-        "quantity": 1
-      }
-    ]
-  }'
-```
-
 ## 🏗️ Architecture
 
-<div align="center">
+The application follows a **microservices architecture** where each business capability is implemented as an independently deployable service.
 
-```mermaid
-graph TB
-    Client[👤 Client] --> Gateway[🌐 API Gateway :8181]
-    
-    Gateway --> ProductSvc[🏪 Product Service :8083]
-    Gateway --> OrderSvc[🛍️ Order Service :8080]  
-    Gateway --> InventorySvc[📦 Inventory Service :8082]
-    
-    ProductSvc --> MongoDB[(🍃 MongoDB)]
-    OrderSvc --> MySQL[(🐬 MySQL)]
-    InventorySvc --> MySQL2[(🐬 MySQL)]
-    
-    OrderSvc --> Kafka[📨 Apache Kafka]
-    Kafka --> NotificationSvc[📧 Notification Service :8084]
-    
-    Gateway --> Eureka[🔍 Eureka Server :8761]
-    ProductSvc --> Eureka
-    OrderSvc --> Eureka
-    InventorySvc --> Eureka
-    
-    style Client fill:#e1f5fe
-    style Gateway fill:#f3e5f5
-    style Kafka fill:#fff3e0
-    style Eureka fill:#e8f5e8
+```text
+                         ┌───────────────────┐
+                         │      Client       │
+                         └─────────┬─────────┘
+                                   │
+                                   ▼
+                         ┌───────────────────┐
+                         │    API Gateway    │
+                         │      :8181        │
+                         └─────────┬─────────┘
+                                   │
+              ┌────────────────────┼────────────────────┐
+              │                    │                    │
+              ▼                    ▼                    ▼
+      ┌───────────────┐    ┌───────────────┐    ┌───────────────┐
+      │ Product       │    │ Order         │    │ Inventory     │
+      │ Service       │    │ Service       │    │ Service       │
+      │ :8083         │    │ :8080         │    │ :8082         │
+      └───────┬───────┘    └───────┬───────┘    └───────┬───────┘
+              │                    │                    │
+              ▼                    ▼                    ▼
+         ┌─────────┐          ┌─────────┐          ┌─────────┐
+         │ MongoDB │          │  MySQL  │          │  MySQL  │
+         └─────────┘          └─────────┘          └─────────┘
+                                   │
+                                   ▼
+                              ┌─────────┐
+                              │  Kafka  │
+                              └─────────┘
+
+                         ┌───────────────────┐
+                         │   Eureka Server   │
+                         │      :8761        │
+                         └───────────────────┘
 ```
 
-</div>
+### Request Flow
 
-### 🔧 Technology Stack
-
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **🏗️ Framework** | Spring Boot 3.x | Microservices foundation |
-| **☁️ Cloud** | Spring Cloud | Distributed system patterns |
-| **🌐 Gateway** | Spring Cloud Gateway | API routing & load balancing |
-| **🔍 Discovery** | Netflix Eureka | Service registration |
-| **📨 Messaging** | Apache Kafka | Event-driven communication |
-| **💾 Databases** | MySQL + MongoDB | Polyglot persistence |
-| **🐳 Containers** | Docker + Compose | Containerization |
-| **☸️ Orchestration** | Kubernetes | Production deployment |
-
-### 📊 Service Overview
-
-| Service | Port | Database | Status | Key Features |
-|---------|------|----------|--------|--------------|
-| 🌐 **API Gateway** | 8181 | - | ✅ | Request routing, Load balancing |
-| 🏪 **Product Service** | 8083 | MongoDB | ✅ | Product CRUD, Search |
-| 📦 **Inventory Service** | 8082 | MySQL | ✅ | Stock management, Validation |
-| 🛍️ **Order Service** | 8080 | MySQL | ✅ | Order processing, Events |
-| 🔍 **Discovery Server** | 8761 | - | ✅ | Service registry |
-| 📧 **Notification Service** | 8084 | - | 🔄 | Email/SMS notifications |
-
-## 📖 Documentation
-
-| Document | Description |
-|----------|-------------|
-| 📋 **[Architecture Design](docs/ARCHITECTURE.md)** | Complete HLD/LLD documentation |
-| 🔌 **[API Reference](docs/API.md)** | Detailed API specifications |
-| 🚀 **[Deployment Guide](docs/DEPLOYMENT.md)** | Docker & Kubernetes setup |
-| 🧪 **[Testing Strategy](docs/TESTING.md)** | Testing approaches & examples |
-| 🤝 **[Contributing Guide](docs/CONTRIBUTING.md)** | Development guidelines |
-
-## 🛠️ Development
-
-### Project Structure
-
-```
-📁 ecommerce-microservices-platform/
-├── 📁 services/
-│   ├── 🏪 product-service/
-│   ├── 📦 inventory-service/
-│   ├── 🛍️ order-service/
-│   └── 📧 notification-service/
-├── 📁 infrastructure/
-│   ├── 🌐 api-gateway/
-│   ├── 🔍 discovery-server/
-│   └── ⚙️ config-server/
-├── 📁 kubernetes/
-├── 🐳 docker-compose.yml
-└── 📋 README.md
+```text
+Client
+  ↓
+API Gateway
+  ↓
+Eureka Service Discovery
+  ↓
+Business Microservice
+  ↓
+Service-specific Database
 ```
 
-### Running Tests
+### Order Flow
+
+```text
+Client
+  ↓
+API Gateway
+  ↓
+Order Service
+  ↓
+Inventory Service
+  ↓
+Order persisted in MySQL
+  ↓
+Order event published to Kafka
+```
+
+The detailed architecture and design documentation is available in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+
+---
+
+# ✨ Features
+
+### 🏪 Product Management
+
+* Create products
+* Retrieve all products
+* Retrieve product by ID
+* Update product details
+* Delete products
+* Product persistence using MongoDB
+
+### 📦 Inventory Management
+
+* Track product stock
+* Check inventory availability
+* Validate requested quantities
+* Maintain inventory independently from the Order Service
+* MySQL-based persistence
+
+### 🛍️ Order Management
+
+* Create orders
+* Manage order line items
+* Validate inventory before placing an order
+* Persist orders using MySQL
+* Generate order numbers
+* Publish order events asynchronously through Kafka
+
+### 🌐 API Gateway
+
+* Single entry point for client requests
+* Routes requests to individual microservices
+* Service-to-service routing through Eureka
+* Load-balanced service discovery
+
+### 🔍 Service Discovery
+
+* Netflix Eureka-based service registry
+* Dynamic service registration
+* Service discovery between microservices
+* Load-balanced communication
+
+### 📨 Event-Driven Communication
+
+Apache Kafka is used for asynchronous communication.
+
+```text
+Order Service
+     │
+     │ OrderPlacedEvent
+     ▼
+   Kafka
+     │
+     ▼
+Consumers / Notification Workflow
+```
+
+### 🐳 Containerized Infrastructure
+
+Docker Compose is used to run supporting infrastructure including:
+
+* MySQL
+* MongoDB
+* Apache Kafka
+* Zookeeper
+* Keycloak
+
+---
+
+# 🧰 Technology Stack
+
+| Category                      | Technology                  |
+| ----------------------------- | --------------------------- |
+| Language                      | Java                        |
+| Framework                     | Spring Boot                 |
+| Microservices                 | Spring Cloud                |
+| API Gateway                   | Spring Cloud Gateway        |
+| Service Discovery             | Netflix Eureka              |
+| Messaging                     | Apache Kafka                |
+| Relational Database           | MySQL                       |
+| NoSQL Database                | MongoDB                     |
+| ORM                           | Spring Data JPA / Hibernate |
+| HTTP Client                   | Spring WebClient            |
+| Containerization              | Docker                      |
+| Authentication Infrastructure | Keycloak                    |
+| Build Tool                    | Maven                       |
+
+---
+
+# 📦 Microservices
+
+| Service           |   Port | Database | Responsibility    |
+| ----------------- | -----: | -------- | ----------------- |
+| API Gateway       | `8181` | —        | Request routing   |
+| Eureka Server     | `8761` | —        | Service discovery |
+| Product Service   | `8083` | MongoDB  | Product catalog   |
+| Inventory Service | `8082` | MySQL    | Stock management  |
+| Order Service     | `8080` | MySQL    | Order processing  |
+
+### Product Service
+
+Responsible for the product catalog.
+
+**Database:** MongoDB
+
+Main operations:
+
+```text
+GET     /api/product
+GET     /api/product/{id}
+POST    /api/product
+PUT     /api/product/{id}
+DELETE  /api/product/{id}
+```
+
+### Inventory Service
+
+Responsible for stock management and availability validation.
+
+**Database:** MySQL
+
+Main operations:
+
+```text
+GET  /api/inventory
+POST /api/inventory/check
+```
+
+### Order Service
+
+Responsible for order creation and order processing.
+
+**Database:** MySQL
+
+Main operation:
+
+```text
+POST /api/order
+```
+
+During order creation, the service:
+
+1. Receives the order request.
+2. Validates the order details.
+3. Checks inventory availability.
+4. Persists the order.
+5. Publishes an order event to Kafka.
+
+---
+
+# 🔄 Order Processing Flow
+
+```text
+                  Client
+                    │
+                    ▼
+              API Gateway
+                    │
+                    ▼
+              Order Service
+                    │
+                    ▼
+           Inventory Service
+                    │
+             Stock Available?
+                /       \
+              No         Yes
+              │           │
+              ▼           ▼
+        Reject Order   Save Order
+                           │
+                           ▼
+                     Publish Event
+                           │
+                           ▼
+                         Kafka
+```
+
+This design keeps inventory management separate from order management and allows asynchronous processing through Kafka.
+
+---
+
+# 📨 Kafka Event Flow
+
+The Order Service publishes an `OrderPlacedEvent` after successfully creating an order.
+
+Example event structure:
+
+```json
+{
+  "orderNumber": "ORDER-12345",
+  "customerEmail": "customer@example.com",
+  "orderDate": "2026-09-12T13:30:00",
+  "orderLineItems": [
+    {
+      "skuCode": "iphone-13",
+      "price": 999.99,
+      "quantity": 2
+    }
+  ]
+}
+```
+
+Kafka provides asynchronous communication between the order workflow and downstream consumers.
+
+---
+
+# 🗄️ Database Strategy
+
+The project follows a **database-per-service approach**.
+
+### Product Service
+
+```text
+Product Service
+      │
+      ▼
+   MongoDB
+```
+
+MongoDB is used for product data because product information can contain flexible attributes such as specifications and image URLs.
+
+### Order Service
+
+```text
+Order Service
+      │
+      ▼
+    MySQL
+```
+
+MySQL stores orders and order line items using a relational model.
+
+### Inventory Service
+
+```text
+Inventory Service
+      │
+      ▼
+    MySQL
+```
+
+Inventory data is maintained independently from the Order Service.
+
+This separation reduces coupling between business domains and allows individual services to evolve independently.
+
+---
+
+# 🚀 Getting Started
+
+## Prerequisites
+
+Install the following:
+
+* Java 17+
+* Maven 3.6+
+* Docker
+* Docker Compose
+
+Verify your installation:
 
 ```bash
-# Run all unit tests
-mvn clean test
-
-# Run integration tests with Testcontainers
-mvn clean verify -P integration-tests
-
-# Run specific service tests
-cd services/order-service && mvn test
+java --version
+mvn --version
+docker --version
+docker compose version
 ```
 
-### Development Commands
+---
+
+## 1. Clone the Repository
 
 ```bash
-# Build all services
-mvn clean package -DskipTests
+git clone https://github.com/ashwinbharadwaj16/E-commerce-Platform.git
 
-# Start with live reload (development)
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
-
-# View logs
-docker-compose logs -f order-service
-
-# Scale services
-docker-compose up --scale order-service=3
+cd E-commerce-Platform
 ```
 
-## 🚀 Deployment
+---
 
-### 🐳 Docker Compose (Development)
+## 2. Start Infrastructure
+
+The Docker Compose configuration is located under the `docker` directory.
 
 ```bash
-# Start all services
-docker-compose up -d
+cd docker
 
-# Build and start
-docker-compose up --build
-
-# Stop all services
-docker-compose down -v
+docker compose up -d
 ```
 
-### ☸️ Kubernetes (Production)
+This starts the supporting infrastructure:
 
-```bash
-# Deploy to Kubernetes
-kubectl apply -f kubernetes/
-
-# Check status
-kubectl get pods,svc
-
-# View logs
-kubectl logs -f deployment/order-service
+```text
+MySQL Order Database
+MySQL Inventory Database
+MongoDB Product Database
+Apache Kafka
+Zookeeper
+Keycloak
 ```
 
-## 🎯 Roadmap
+---
 
-### ✅ Current Features (v1.0)
-- Product catalog management
-- Inventory tracking with validation
-- Order placement and processing
-- Event-driven notifications
-- Service discovery and routing
-- API Gateway with load balancing
+## 3. Start the Microservices
 
-### 🔄 In Progress
-- [ ] User authentication (Keycloak integration)
-- [ ] React frontend application
-- [ ] Distributed tracing (Zipkin)
-- [ ] Circuit breakers (Resilience4j)
+Start the following applications using your IDE or Maven:
 
-### 📅 Planned Features
-- [ ] Payment processing integration
-- [ ] Advanced search and filtering
-- [ ] Recommendation engine
-- [ ] Mobile app support
-- [ ] Performance monitoring dashboard
-- [ ] Multi-tenant architecture
+```text
+Eureka Server
+API Gateway
+Product Service
+Inventory Service
+Order Service
+```
 
-## 🧪 API Examples
+Recommended startup order:
 
-<details>
-<summary>📋 Click to see API examples</summary>
+```text
+1. Eureka Server
+2. Product Service
+3. Inventory Service
+4. Order Service
+5. API Gateway
+```
 
-### Create Product
+Once the services are registered, verify them through the Eureka dashboard:
+
+```text
+http://localhost:8761
+```
+
+---
+
+# 🌐 Service Endpoints
+
+| Component         | URL                     |
+| ----------------- | ----------------------- |
+| API Gateway       | `http://localhost:8181` |
+| Eureka Dashboard  | `http://localhost:8761` |
+| Product Service   | `http://localhost:8083` |
+| Inventory Service | `http://localhost:8082` |
+| Order Service     | `http://localhost:8080` |
+| Kafka             | `localhost:9092`        |
+| MongoDB           | `localhost:27017`       |
+| MySQL - Order     | `localhost:3306`        |
+| MySQL - Inventory | `localhost:3307`        |
+| Keycloak          | `http://localhost:9090` |
+
+---
+
+# 🧪 API Examples
+
+## Create Product
+
 ```bash
 curl -X POST http://localhost:8181/api/product \
   -H "Content-Type: application/json" \
   -d '{
     "name": "iPhone 13",
-    "description": "Latest iPhone with A15 chip",
+    "description": "Apple iPhone 13",
     "price": 999.99,
     "skuCode": "iphone-13"
   }'
 ```
 
-### Place Order
+---
+
+## Get Products
+
+```bash
+curl http://localhost:8181/api/product
+```
+
+---
+
+## Check Inventory
+
+```bash
+curl "http://localhost:8181/api/inventory?skuCode=iphone-13"
+```
+
+---
+
+## Place an Order
+
 ```bash
 curl -X POST http://localhost:8181/api/order \
   -H "Content-Type: application/json" \
@@ -294,86 +479,309 @@ curl -X POST http://localhost:8181/api/order \
   }'
 ```
 
-### Check Inventory
-```bash
-curl "http://localhost:8181/api/inventory?skuCode=iphone-13&skuCode=samsung-s21"
+---
+
+# 🧩 Project Structure
+
+```text
+E-commerce-Platform/
+│
+├── api-gateway/
+│   └── API Gateway application
+│
+├── discovery_server/
+│   └── Eureka Discovery Server
+│
+├── product_service/
+│   └── Product catalog microservice
+│
+├── inventory_service/
+│   └── Inventory management microservice
+│
+├── order_service/
+│   └── Order processing microservice
+│
+├── notificaiton-service/
+│   └── Notification-related components
+│
+├── docker/
+│   └── Docker Compose infrastructure
+│
+├── ARCHITECTURE.md
+│
+└── README.md
 ```
-
-</details>
-
-## 🔧 Troubleshooting
-
-<details>
-<summary>🆘 Common issues and solutions</summary>
-
-### Port Already in Use
-```bash
-# Find process using port
-lsof -i :8080
-# Kill process
-kill -9 <PID>
-```
-
-### Service Not Registered
-```bash
-# Check Eureka dashboard
-open http://localhost:8761
-# Restart discovery server
-docker-compose restart eureka-server
-```
-
-### Database Connection Failed
-```bash
-# Check database status
-docker-compose ps
-# Reset databases
-docker-compose down -v && docker-compose up -d mysql mongodb
-```
-
-</details>
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. 🍴 **Fork** the repository
-2. 🌟 **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. ✅ **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. 📤 **Push** to the branch (`git push origin feature/amazing-feature`)
-5. 🔄 **Open** a Pull Request
-
-### Development Guidelines
-
-- ✅ Write tests for new features
-- 📝 Update documentation
-- 🎯 Follow Spring Boot best practices
-- 🔍 Ensure all services register with Eureka
-- 📨 Use events for cross-service communication
-
-## 📜 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Spring Boot team for the excellent framework
-- Netflix for Eureka and other cloud patterns
-- Apache Kafka for robust messaging
-- Docker for containerization
-
-## 📞 Support
-
-- 📖 **Documentation**: Check the [docs](docs/) folder
-- 🐛 **Bug Reports**: [Open an issue](https://github.com/YOUR_USERNAME/ecommerce-microservices-platform/issues)
-- 💬 **Questions**: [Start a discussion](https://github.com/YOUR_USERNAME/ecommerce-microservices-platform/discussions)
-- ⭐ **Show Support**: Star this repository if you find it useful!
 
 ---
 
-<div align="center">
+# 🔗 Service Communication
 
-**Built with ❤️ using Spring Boot & Microservices Architecture**
+The platform uses two primary communication patterns.
 
-[⬆ Back to Top](#-e-commerce-microservices-platform)
+### Synchronous
 
-</div>
+Used when the calling service requires an immediate response.
+
+```text
+Order Service
+      │
+      │ WebClient
+      ▼
+Inventory Service
+```
+
+For example, the Order Service checks inventory before creating an order.
+
+### Asynchronous
+
+Used for event-based workflows.
+
+```text
+Order Service
+      │
+      ▼
+    Kafka
+      │
+      ▼
+Downstream Consumers
+```
+
+This allows downstream processing to be decoupled from the main order transaction.
+
+---
+
+# 🐳 Docker Infrastructure
+
+The project uses Docker Compose for local infrastructure.
+
+```bash
+cd docker
+
+docker compose up -d
+```
+
+Stop the infrastructure:
+
+```bash
+docker compose down
+```
+
+Stop and remove persistent volumes:
+
+```bash
+docker compose down -v
+```
+
+---
+
+# 🔐 Security
+
+Keycloak infrastructure is included in the Docker environment for authentication and authorization development.
+
+The planned security architecture includes:
+
+```text
+Client
+   │
+   ▼
+API Gateway
+   │
+   ▼
+Keycloak
+   │
+   ▼
+JWT Authentication
+   │
+   ▼
+Microservices
+```
+
+Planned security capabilities include:
+
+* OAuth2 / OpenID Connect
+* JWT authentication
+* Role-based authorization
+* API Gateway security
+* Secure inter-service communication
+
+> Authentication and authorization are part of the project's ongoing development roadmap.
+
+---
+
+# 📈 Scalability & Resilience
+
+The architecture is designed to support horizontal scaling of individual services.
+
+For example:
+
+```text
+              API Gateway
+                   │
+        ┌──────────┼──────────┐
+        ▼          ▼          ▼
+    Order #1   Order #2   Order #3
+        │          │          │
+        └──────────┼──────────┘
+                   ▼
+                Kafka
+```
+
+Eureka enables service discovery while Spring Cloud Gateway provides centralized routing.
+
+Future resilience improvements include:
+
+* Circuit breakers
+* Retry mechanisms
+* Distributed tracing
+* Centralized configuration
+* Metrics and monitoring
+
+---
+
+# 🧪 Testing
+
+The project can be tested at multiple levels:
+
+### Unit Testing
+
+Test individual controllers, services, and business logic independently.
+
+### Integration Testing
+
+Test communication between:
+
+```text
+Order Service
+      ↓
+Inventory Service
+      ↓
+Database
+```
+
+### API Testing
+
+The REST APIs can be tested using:
+
+* cURL
+* Postman
+* IntelliJ HTTP Client
+
+---
+
+# 🛣️ Roadmap
+
+## Phase 1 — Core Microservices ✅
+
+* [x] Product Service
+* [x] Inventory Service
+* [x] Order Service
+* [x] API Gateway
+* [x] Eureka Service Discovery
+* [x] MySQL persistence
+* [x] MongoDB persistence
+* [x] Kafka integration
+* [x] Docker infrastructure
+
+## Phase 2 — Security 🔄
+
+* [ ] Complete Keycloak integration
+* [ ] JWT authentication
+* [ ] Role-based authorization
+* [ ] Secure API Gateway
+* [ ] Centralized configuration
+
+## Phase 3 — Resilience & Observability 🔄
+
+* [ ] Resilience4j circuit breaker
+* [ ] Distributed tracing
+* [ ] Prometheus metrics
+* [ ] Grafana dashboards
+* [ ] Centralized logging
+
+## Phase 4 — E-Commerce Features 📅
+
+* [ ] Payment Service
+* [ ] Notification Service
+* [ ] Advanced product search
+* [ ] Shopping cart
+* [ ] User management
+* [ ] Recommendation engine
+* [ ] Redis caching
+
+## Phase 5 — Deployment & Automation 📅
+
+* [ ] Kubernetes deployment
+* [ ] CI/CD pipeline
+* [ ] Automated container builds
+* [ ] Kubernetes autoscaling
+* [ ] Cloud deployment
+
+---
+
+# 📚 Documentation
+
+For a deeper explanation of the system design, see:
+
+**[ARCHITECTURE.md](./ARCHITECTURE.md)**
+
+The architecture document covers:
+
+* High-Level Design
+* Low-Level Design
+* Service responsibilities
+* API contracts
+* Database models
+* Kafka communication
+* Docker architecture
+* Deployment architecture
+* Future improvements
+
+---
+
+# 🎯 What This Project Demonstrates
+
+This project demonstrates practical implementation of:
+
+* Java backend development
+* Spring Boot
+* Spring Cloud
+* Microservices architecture
+* REST APIs
+* API Gateway
+* Service Discovery
+* Inter-service communication
+* Apache Kafka
+* Event-driven architecture
+* MySQL
+* MongoDB
+* Spring Data JPA
+* WebClient
+* Docker
+* Distributed system design
+
+---
+
+# 🤝 Contributing
+
+Contributions and improvements are welcome.
+
+```bash
+git checkout -b feature/<feature-name>
+
+git add .
+
+git commit -m "Add <feature-name>"
+
+git push origin feature/<feature-name>
+```
+
+Then open a Pull Request.
+
+---
+
+## 👨‍💻 Author
+
+**Ashwin Bharadwaj**
+
+Java Backend Developer | Spring Boot | Microservices | Kafka | Docker
+
